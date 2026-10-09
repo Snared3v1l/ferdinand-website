@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>NOVA CITY - GTA V REAL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Bebas+Neue&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:'Bebas Neue';color:#fff}
+canvas{position:fixed;inset:0}
+#gta-hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+#top-right{position:absolute;top:12px;right:14px;text-align:right}
+#money{font-family:Orbitron;font-size:24px;color:#fff;text-shadow:0 2px 0 #000,0 0 10px #000}
+#health-bar{width:140px;height:8px;background:rgba(0,0,0,0.6);border:1px solid #fff;margin-top:6px}
+#health-fill{height:100%;background:linear-gradient(90deg,#ff0000,#ff6600);width:100%;transition:0.3s}
+#stars{font-size:22px;letter-spacing:2px;margin-top:4px}
+#minimap{position:absolute;bottom:18px;left:14px;width:150px;height:150px;background:rgba(0,0,0,0.7);border:2px solid rgba(255,255,255,0.8);border-radius:4px;overflow:hidden}
+#minimap canvas{position:relative;width:100%;height:100%}
+#char-switch{position:absolute;bottom:18px;right:14px;display:flex;gap:8px;pointer-events:auto}
+.char-icon{width:56px;height:56px;border-radius:50%;border:2px solid #666;overflow:hidden;position:relative;cursor:pointer;transition:0.2s}
+.char-icon.active{border-color:#fff;box-shadow:0 0 20px #fff;transform:scale(1.15)}
+.char-icon img{width:100%;height:100%;object-fit:cover}
+.char-icon b{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.7);font-size:8px;text-align:center;padding:1px}
+#controls{position:fixed;bottom:0;left:0;right:0;padding:10px 14px;display:flex;justify-content:space-between;align-items:flex-end;z-index:6}
+#joy{width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.1),transparent);border:1px solid rgba(255,255,255,0.2);position:relative}
+#stick{width:56px;height:56px;background:#fff;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 0 15px #fff}
+.gta-btn{width:68px;height:68px;border-radius:50%;background:rgba(0,0,0,0.6);border:1px solid #fff;color:#fff;font-family:Bebas Neue;display:flex;align-items:center;justify-content:center;font-size:12px;text-align:center;pointer-events:auto}
+#cheatBar{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:7;display:flex;gap:6px}
+#cheatBar input{background:rgba(0,0,0,0.9);border:1px solid #0f0;color:#0f0;padding:8px 14px;border-radius:4px;font-family:Orbitron;width:170px;text-align:center;text-transform:uppercase;font-size:12px}
+#cheatBar button{background:#0f0;border:none;padding:8px 16px;border-radius:4px;font-weight:900;color:#000}
+#loadScreen{position:fixed;inset:0;z-index:100;background:radial-gradient(ellipse at center,#1a1a2e 0%,#000 80%);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.8s}
+#loadScreen.hide{opacity:0;pointer-events:none}
+.wheel{display:flex;gap:14px;margin:18px}
+.wheelCard{width:110px;height:140px;border-radius:12px;overflow:hidden;border:3px solid #333;cursor:pointer;position:relative;transition:0.3s}
+.wheelCard.sel{border-color:#fff;box-shadow:0 0 30px #fff;transform:scale(1.1)}
+.wheelCard img{width:100%;height:100%;object-fit:cover}
+.wheelCard.tag{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,#000);padding:18px 6px 6px;text-align:center;font-size:12px}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="gta-hud">
+<div id="top-right">
+<div id="money">$015,320</div>
+<div id="health-bar"><div id="health-fill"></div></div>
+<div id="stars">☆☆☆☆☆</div>
+<div id="carName" style="margin-top:6px;font-size:14px;opacity:0.8;letter-spacing:1px">ON FOOT</div>
+</div>
+<div id="minimap"><canvas id="mini"></canvas></div>
+<div id="char-switch">
+<div class="char-icon active" id="iconF"><img src="ferdinand.png" onerror="this.src='https://i.imgur.com/8Km9tLL.png'"><b>FERDI</b></div>
+<div class="char-icon" id="iconE"><img src="evra.png" onerror="this.src='https://i.imgur.com/8Km9tLL.png'"><b>EVRA</b></div>
+<div class="char-icon" id="iconM"><img src="meek.png" onerror="this.src='https://i.imgur.com/8Km9tLL.png'"><b>MEEK</b></div>
+</div>
+</div>
+<div id="cheatBar"><input id="cheatIn" placeholder="CHEAT CODE"><button id="cheatBtn">CHEAT</button></div>
+<div id="controls"><div id="joy"><div id="stick"></div></div><div style="display:flex;gap:10px"><div class="gta-btn" id="btnEnter">ENTER /<br>EXIT [E]</div><div class="gta-btn" id="btnCar">JACK<br>[F]</div></div></div>
+
+<div id="loadScreen">
+<h1 style="font-family:Orbitron;font-size:44px;background:linear-gradient(90deg,#0f0,#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">NOVA CITY</h1>
+<p style="letter-spacing:6px;font-size:10px;color:#666;margin-top:4px">GRAND THEFT AUTO: KUMASI</p>
+<div class="wheel">
+<div class="wheelCard sel" data-c="Ferdinand"><img src="ferdinand.png" onerror="this.style.background='#222'"><div class="tag">FERDINAND<br><span style="font-size:8px;opacity:0.6">BOSS • WAVY</span></div></div>
+<div class="wheelCard" data-c="Evra"><img src="evra.png" onerror="this.style.background='#333'"><div class="tag">EVRA<br><span style="font-size:8px;opacity:0.6">DRIVER • AFRO</span></div></div>
+<div class="wheelCard" data-c="Meek"><img src="meek.png" onerror="this.style.background='#111'"><div class="tag">MEEK<br><span style="font-size:8px;opacity:0.6">SHOOTER • DREADS</span></div></div>
+</div>
+<div style="font-size:9px;color:#333;text-align:center;max-width:320px;line-height:1.4">CHEATS LIKE GTA V: HESOYAM health • ROCKET supercar • MONEY $10k • POLICE clear wanted • SUPER speed • LAMBO • GWAGON</div>
+<button id="playBtn" style="margin-top:16px;padding:16px 70px;background:#fff;color:#000;border:none;border-radius:4px;font-family:Orbitron;font-weight:900;letter-spacing:2px;box-shadow:0 0 30px #fff">PLAY</button>
+</div>
+
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),mini=document.getElementById('mini'),mctx=mini.getContext('2d');
+let W=innerWidth,H=innerHeight,D=devicePixelRatio;
+function resize(){W=innerWidth;H=innerHeight;canvas.width=W*D;canvas.height=H*D;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(D,0,0,D,0,0);mini.width=150;mini.height=150;}resize();addEventListener('resize',resize);
+let char='Ferdinand',col='#00ff88',money=15320,wanted=0,health=100,px=600,py=500,vx=0,vy=0,inCar=null,inside=null,joy={x:0,y:0,a:false},keys={};
+document.querySelectorAll('.wheelCard').forEach(c=>c.onclick=()=>{document.querySelectorAll('.wheelCard').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');char=c.dataset.c;});
+document.getElementById('playBtn').onclick=()=>{
+if(char==='Ferdinand')col='#00ff88';if(char==='Evra')col='#ffaa00';if(char==='Meek')col='#ff00ff';
+document.getElementById('loadScreen').classList.add('hide');
+document.querySelectorAll('.char-icon').forEach(el=>el.classList.remove('active'));
+if(char==='Ferdinand')document.getElementById('iconF').classList.add('active');
+if(char==='Evra')document.getElementById('iconE').classList.add('active');
+if(char==='Meek')document.getElementById('iconM').classList.add('active');
+setInterval(()=>{update();draw();drawMini();},1000/60);
+};
+document.getElementById('iconF').onclick=()=>{char='Ferdinand';col='#00ff88';switchChar()};
+document.getElementById('iconE').onclick=()=>{char='Evra';col='#ffaa00';switchChar()};
+document.getElementById('iconM').onclick=()=>{char='Meek';col='#ff00ff';switchChar()};
+function switchChar(){document.querySelectorAll('.char-icon').forEach(e=>e.classList.remove('active'));if(char==='Ferdinand')iconF.classList.add('active');if(char==='Evra')iconE.classList.add('active');if(char==='Meek')iconM.classList.add('active');}
+
+let buildings=[{x:50,y:50,w:240,h:160,n:'PACIFIC STANDARD BANK',c:'#101025'},{x:380,y:40,w:260,h:130,n:'AMMU-NATION',c:'#251010'},{x:80,y:320,w:220,h:180,n:'CUSTOMS GARAGE',c:'#102010'},{x:400,y:300,w:280,h:190,n:'CENTRAL HOSPITAL',c:'#102525'},{x:50,y:620,w:260,h:140,n:'CLUB EVRA',c:'#251025'},{x:400,y:620,w:260,h:160,n:'MEEK MANSION',c:'#252510'},{x:780,y:80,w:220,h:260,n:'MALL',c:'#1a1a1a'},{x:780,y:480,w:240,h:220,n:'CASINO',c:'#201a05'}];
+let cars=[{x:320,y:250,w:48,h:24,col:'#2ecc71',n:'BRABUS G-WAGON',sp:6},{x:680,y:200,w:52,h:22,col:'#f1c40f',n:'LAMBO REVUELTO',sp:9.5},{x:180,y:550,w:54,h:26,col:'#95a5a6',n:'CYBERTRUCK',sp:7.2},{x:720,y:420,w:46,h:22,col:'#e74c3c',n:'SUPRA MK4',sp:8.2},{x:350,y:800,w:50,h:24,col:'#ecf0f1',n:'BENZ MAYBACH',sp:6.5},{x:800,y:770,w:50,h:24,col:'#00ffff',n:'RANGE ROVER SVR',sp:6}];
+let cops=[];
+
+function draw(){
+let camX=px-W/2,camY=py-H/2;
+if(inside){let g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,900);g.addColorStop(0,inside.c);g.addColorStop(1,'#000');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.font='14px Bebas Neue';ctx.fillText('📍 '+inside.n+' • INTERIOR • PRESS [E] TO EXIT',20,30);ctx.fillStyle=col;ctx.shadowBlur=30;ctx.shadowColor=col;ctx.beginPath();ctx.arc(W/2,H/2,16,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;return;}
+ctx.fillStyle='#080810';ctx.fillRect(0,0,W,H);
+ctx.strokeStyle='rgba(255,255,255,0.03)';for(let i=-2000;i<3000;i+=70){ctx.beginPath();ctx.moveTo(i-camX,0);ctx.lineTo(i-camX,H);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i-camY);ctx.lineTo(W,i-camY);ctx.stroke();}
+buildings.forEach(b=>{let sx=b.x-camX,sy=b.y-camY;ctx.fillStyle=b.c;ctx.shadowBlur=20;ctx.shadowColor=b.c;ctx.fillRect(sx,sy,b.w,b.h);ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.04)';ctx.fillRect(sx,sy,b.w,20);ctx.fillStyle='#fff';ctx.font='11px Bebas Neue';ctx.fillText(b.n,sx+10,sy+14);ctx.fillStyle='#ff0';ctx.fillRect(sx+b.w/2-16,sy+b.h-10,32,10);});
+cars.forEach(c=>{let sx=c.x-camX,sy=c.y-camY;ctx.save();ctx.translate(sx,sy);ctx.fillStyle=c.col;ctx.shadowBlur=c===inCar?20:8;ctx.shadowColor=c.col;ctx.beginPath();ctx.roundRect(-c.w/2,-c.h/2,c.w,c.h,7);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(-c.w/2+6,-c.h/2+4,c.w-12,c.h-8);ctx.fillStyle='#fff';ctx.fillRect(c.w/2-5,-c.h/2+2,5,5);ctx.fillRect(c.w/2-5,c.h/2-7,5,5);ctx.restore();});
+if(inCar){ctx.save();ctx.translate(W/2,H/2);ctx.fillStyle=col;ctx.shadowBlur=30;ctx.shadowColor=col;ctx.beginPath();ctx.roundRect(-inCar.w/2,-inCar.h/2,inCar.w,inCar.h,7);ctx.fill();ctx.shadowBlur=0;ctx.restore();}else{ctx.fillStyle=col;ctx.shadowBlur=30;ctx.shadowColor=col;ctx.beginPath();ctx.arc(W/2,H/2,15,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}
+cops.forEach(c=>{let sx=c.x-camX,sy=c.y-camY;ctx.fillStyle='#0033ff';ctx.fillRect(sx-13,sy-9,26,18);ctx.fillStyle=c.blink?'#ff0000':'#0033ff';ctx.fillRect(sx-13,sy-13,26,7);});
+}
+function drawMini(){
+mctx.fillStyle='#0a0a0a';mctx.fillRect(0,0,150,150);
+mctx.strokeStyle='rgba(255,255,255,0.08)';for(let i=0;i<150;i+=15){mctx.beginPath();mctx.moveTo(i,0);mctx.lineTo(i,150);mctx.stroke();mctx.beginPath();mctx.moveTo(0,i);mctx.lineTo(150,i);mctx.stroke();}
+let sc=0.12;buildings.forEach(b=>{mctx.fillStyle=b.c;mctx.fillRect((b.x-px)*sc+75,(b.y-py)*sc+75,b.w*sc,b.h*sc);});
+cars.forEach(c=>{mctx.fillStyle=c.col;mctx.fillRect((c.x-px)*sc+75,(c.y-py)*sc+75,4,4);});
+mctx.fillStyle=col;mctx.beginPath();mctx.arc(75,75,4,0,Math.PI*2);mctx.fill();
+cops.forEach(c=>{mctx.fillStyle='#f00';mctx.fillRect((c.x-px)*sc+75,(c.y-py)*sc+75,3,3);});
+}
+function update(){
+if(inside)return;
+let sp=inCar?inCar.sp:(char==='Evra'?4.5:3.8);
+let mx=joy.a?joy.x:0,my=joy.a?joy.y:0;
+if(keys['a'])mx=-1;if(keys['d'])mx=1;if(keys['w'])my=-1;if(keys['s'])my=1;
+if(inCar){inCar.x+=mx*sp;inCar.y+=my*sp;px=inCar.x;py=inCar.y;}else{vx+=(mx*1.2-vx)*0.22;vy+=(my*1.2-vy)*0.22;px+=vx*sp;py+=vy*sp;}
+cops.forEach(c=>{c.x+=(px-c.x)*0.013;c.y+=(py-c.y)*0.013;c.blink=!c.blink;if(Math.hypot(c.x-px,c.y-py)<28){health-=0.6;document.getElementById('health-fill').style.width=health+'%';if(health<=0){health=100;wanted=0;money=Math.max(0,money-1500);px=600;py=500;updateHUD();}}});
+}
+function updateHUD(){
+document.getElementById('money').textContent='$'+String(money).padStart(6,'0');
+document.getElementById('health-fill').style.width=health+'%';
+let s='';for(let i=0;i<5;i++)s+=i<wanted?'★':'☆';document.getElementById('stars').textContent=s;
+document.getElementById('carName').textContent=inCar?inCar.n:'ON FOOT • '+char.toUpperCase();
+}
+function nearB(){return buildings.find(b=>Math.hypot(px-(b.x+b.w/2),py-(b.y+b.h))<80);}
+function nearC(){return cars.find(c=>Math.hypot(px-c.x,py-c.y)<55);}
+document.getElementById('btnEnter').onclick=()=>{
+if(inside){inside=null;py+=90;updateHUD();return;}
+let b=nearB();if(b){inside=b;if(b.n.includes('BANK'))money+=2000;if(b.n.includes('HOSPITAL'))health=100;updateHUD();}
+};
+document.getElementById('btnCar').onclick=()=>{
+if(inCar){inCar=null;py+=40;updateHUD();return;}
+let c=nearC();if(c){inCar=c;wanted=Math.min(5,wanted+1);updateHUD();}
+};
+function cheat(){
+let v=document.getElementById('cheatIn').value.toUpperCase().trim(),inp=document.getElementById('cheatIn');
+if(v==='HESOYAM'){health=100;money+=5000;inp.value='HESOYAM ✓';}
+else if(v==='ROCKET'||v==='COMET'){let c={x:px+90,y:py,w:56,h:24,col:'#ff00ff',n:'ROCKET GT ULTRA',sp:12};cars.push(c);inp.value='ROCKET SPAWNED ✓';}
+else if(v==='MONEY'){money+=10000;inp.value='+$10000 ✓';}
+else if(v==='POLICE'||v==='AEZAKMI'){wanted=0;cops=[];inp.value='WANTED CLEARED ✓';}
+else if(v==='LAMBO'){let c={x:px+70,y:py,w:52,h:22,col:'#ff0',n:'LAMBO',sp:9.5};cars.push(c);inp.value='LAMBO SPAWNED ✓';}
+else if(v==='GWAGON'){let c={x:px+70,y:py,w:48,h:24,col:'#0f0',n:'G-WAGON',sp:6};cars.push(c);inp.value='G-WAGON SPAWNED ✓';}
+else if(v==='SUPER'){inp.value='SUPER SPEED 20s';let orig=inCar?inCar.sp:0;let it=setInterval(()=>{if(inCar)inCar.sp=15;},100);setTimeout(()=>{clearInterval(it);if(inCar)inCar.sp=6;inp.value='';},20000);return;}
+else{inp.value='INVALID';setTimeout(()=>inp.value='',1200);return;}
+updateHUD();setTimeout(()=>inp.value='',2000);
+}
+document.getElementById('cheatBtn').onclick=cheat;
+document.getElementById('cheatIn').addEventListener('keydown',e=>{if(e.key==='Enter')cheat();});
+let joyEl=document.getElementById('joy'),stick=document.getElementById('stick');
+function hJoy(e){let r=joyEl.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,tx=(e.touches?e.touches[0].clientX:e.clientX)-cx,ty=(e.touches?e.touches[0].clientY:e.clientY)-cy,d=Math.hypot(tx,ty),m=r.width/2-28;if(d>m){tx=tx/d*m;ty=ty/d*m;}stick.style.transform=`translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;joy.x=tx/m;joy.y=ty/m;}
+joyEl.addEventListener('touchstart',e=>{joy.a=true;hJoy(e)},{passive:false});
+joyEl.addEventListener('touchmove',e=>{e.preventDefault();hJoy(e)},{passive:false});
+joyEl.addEventListener('touchend',()=>{joy.a=false;joy.x=0;joy.y=0;stick.style.transform='translate(-50%,-50%)';});
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='e')btnEnter.click();if(e.key.toLowerCase()==='f')btnCar.click();});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+setInterval(()=>{if(wanted>0&&cops.length<wanted*3)cops.push({x:px+(Math.random()-0.5)*900,y:py+(Math.random()-0.5)*900,blink:true});},1300);
+draw();drawMini();updateHUD();
+</script>
+</body>
+</html>
