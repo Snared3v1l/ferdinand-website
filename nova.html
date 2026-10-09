@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NOVA BLITZ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;touch-action:none}
+body{background:#050510;overflow:hidden;font-family:'Orbitron',monospace;color:#fff}
+#game{position:fixed;top:0;left:0;width:100%;height:100%}
+#ui{position:fixed;top:0;left:0;width:100%;padding:15px;display:flex;justify-content:space-between;z-index:10;pointer-events:none}
+.score{font-size:20px;text-shadow:0 0 10px #0ff}
+#healthBar{width:120px;height:10px;background:rgba(255,255,255,0.2);border-radius:10px;overflow:hidden;margin-top:5px}
+#healthFill{height:100%;width:100%;background:linear-gradient(90deg,#0ff,#0f0);transition:width 0.3s}
+#startScreen{position:fixed;inset:0;background:radial-gradient(circle at center,#101030,#050510);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;text-align:center}
+h1{font-size:clamp(32px,8vw,64px);font-weight:900;background:linear-gradient(90deg,#0ff,#f0f,#ff0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px #0ff);margin-bottom:10px}
+.btn{margin-top:25px;padding:16px 40px;font-family:'Orbitron';font-weight:900;font-size:18px;background:linear-gradient(90deg,#0ff,#08f);border:none;border-radius:50px;color:#000;box-shadow:0 0 30px #0ff;cursor:pointer}
+#controls{position:fixed;bottom:20px;left:0;width:100%;display:flex;justify-content:space-between;padding:0 20px;z-index:10}
+#joystick{width:110px;height:110px;border:2px solid rgba(0,255,255,0.3);border-radius:50%;background:radial-gradient(circle,rgba(0,255,255,0.15),transparent);position:relative}
+#stick{width:50px;height:50px;background:linear-gradient(135deg,#0ff,#08f);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 0 20px #0ff}
+#fireBtn{width:80px;height:80px;border:2px solid rgba(255,0,255,0.5);border-radius:50%;background:radial-gradient(circle,rgba(255,0,255,0.3),transparent);display:flex;align-items:center;justify-content:center;font-size:24px}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui">
+<div><div class="score">SCORE: <span id="score">0</span></div><div id="healthBar"><div id="healthFill"></div></div></div>
+<div class="score">BEST: <span id="best">0</span></div>
+</div>
+<div id="startScreen">
+<h1>NOVA BLITZ</h1>
+<p style="opacity:0.7;margin:10px">DRAG JOYSTICK TO MOVE • TAP PINK TO FIRE</p>
+<p style="opacity:0.5;font-size:12px">BY FERDINAND • GITHUB</p>
+<button class="btn" id="playBtn">▶ PLAY NOW</button>
+</div>
+<div id="controls" style="display:none">
+<div id="joystick"><div id="stick"></div></div>
+<div id="fireBtn">🔥</div>
+</div>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+let W,H,DPR=window.devicePixelRatio||1;
+function resize(){W=innerWidth;H=innerHeight;canvas.width=W*DPR;canvas.height=H*DPR;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);}
+resize();addEventListener('resize',resize);
+let running=false,score=0,best=localStorage.getItem('novaBest')||0,health=100;
+document.getElementById('best').textContent=best;
+let player={x:0,y:0,r:18,vx:0,vy:0},bullets=[],enemies=[],particles=[],stars=[];
+for(let i=0;i<120;i++)stars.push({x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+0.5,sp:Math.random()*1+0.3});
+let keys={left:false,right:false,up:false,down:false},joy={x:0,y:0,active:false},firing=false;
+function reset(){player.x=W/2;player.y=H-120;bullets=[];enemies=[];particles=[];score=0;health=100;document.getElementById('score').textContent=0;updateHealth();}
+function updateHealth(){document.getElementById('healthFill').style.width=health+'%';}
+function spawnEnemy(){if(!running)return;let x=Math.random()*(W-40)+20;enemies.push({x,y:-30,r:14+Math.random()*16,vx:(Math.random()-0.5)*2,vy:1.5+Math.random()*2.5+score*0.005,hp:1});setTimeout(spawnEnemy,Math.max(300,1000-score*2));}
+function explosion(x,y,color,count=12){for(let i=0;i<count;i++){let a=Math.random()*Math.PI*2,s=Math.random()*6+2;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:Math.random()*3+1,life:1,color});}}
+function loop(t){
+if(!running)return;
+ctx.fillStyle='#050510';ctx.fillRect(0,0,W,H);
+ctx.fillStyle='rgba(255,255,255,0.8)';stars.forEach(s=>{s.y+=s.sp;if(s.y>H){s.y=0;s.x=Math.random()*W;}ctx.beginPath();ctx.arc(s.x,s.y,s.s,0,Math.PI*2);ctx.fill();});
+let mx=joy.active?joy.x:0,my=joy.active?joy.y:0;
+if(keys.left)mx=-1;if(keys.right)mx=1;if(keys.up)my=-1;if(keys.down)my=1;
+player.vx+=(mx*0.8-player.vx)*0.2;player.vy+=(my*0.8-player.vy)*0.2;
+player.x+=player.vx*6;player.y+=player.vy*6;
+player.x=Math.max(20,Math.min(W-20,player.x));player.y=Math.max(20,Math.min(H-20,player.y));
+if(firing && (t%80<16)){bullets.push({x:player.x,y:player.y-20,vx:(Math.random()-0.5)*0.5,vy:-9,r:3});}
+bullets.forEach((b,i)=>{b.y+=b.vy;b.x+=b.vx;if(b.y<0)bullets.splice(i,1);});
+enemies.forEach((e,i)=>{
+e.x+=e.vx;e.y+=e.vy;
+if(e.y>H+40)enemies.splice(i,1);
+let d=Math.hypot(player.x-e.x,player.y-e.y);
+if(d<player.r+e.r){explosion(e.x,e.y,'#f00',8);enemies.splice(i,1);health-=18;updateHealth();if(navigator.vibrate)navigator.vibrate(50);if(health<=0)gameOver();}
+bullets.forEach((b,j)=>{
+if(Math.hypot(b.x-e.x,b.y-e.y)<e.r+b.r){explosion(e.x,e.y,'#0ff',10);enemies.splice(i,1);bullets.splice(j,1);score+=10;document.getElementById('score').textContent=score;}
+});
+});
+ctx.shadowBlur=20;ctx.shadowColor='#0ff';ctx.fillStyle='#0ff';ctx.beginPath();ctx.moveTo(player.x,player.y-player.r);ctx.lineTo(player.x-player.r*0.7,player.y+player.r);ctx.lineTo(player.x+player.r*0.7,player.y+player.r);ctx.closePath();ctx.fill();ctx.shadowBlur=0;
+enemies.forEach(e=>{ctx.shadowBlur=15;ctx.shadowColor='#f0f';ctx.fillStyle='#f0f';ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;});
+bullets.forEach(b=>{ctx.fillStyle='#ff0';ctx.shadowBlur=10;ctx.shadowColor='#ff0';ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;});
+particles.forEach((p,i)=>{p.x+=p.vx;p.y+=p.vy;p.vx*=0.98;p.vy*=0.98;p.life-=0.02;if(p.life<=0)particles.splice(i,1);else{ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}});
+requestAnimationFrame(loop);
+}
+function gameOver(){running=false;best=Math.max(best,score);localStorage.setItem('novaBest',best);document.getElementById('best').textContent=best;document.getElementById('startScreen').innerHTML=`<h1 style="font-size:40px">GAME OVER</h1><p style="font-size:24px;margin:10px">SCORE: ${score}</p><p style="opacity:0.6">BEST: ${best}</p><button class="btn" onclick="location.reload()">REPLAY</button>`;document.getElementById('startScreen').style.display='flex';document.getElementById('controls').style.display='none';}
+document.getElementById('playBtn').onclick=()=>{
+document.getElementById('startScreen').style.display='none';document.getElementById('controls').style.display='flex';reset();running=true;spawnEnemy();loop();
+};
+let joyEl=document.getElementById('joystick'),stick=document.getElementById('stick');
+function handleJoy(e){let r=joyEl.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,tx=(e.touches?e.touches[0].clientX:e.clientX)-cx,ty=(e.touches?e.touches[0].clientY:e.clientY)-cy,d=Math.hypot(tx,ty),max=r.width/2-25;if(d>max){tx=tx/d*max;ty=ty/d*max;}stick.style.transform=`translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;joy.x=tx/max;joy.y=ty/max;}
+joyEl.addEventListener('touchstart',e=>{joy.active=true;handleJoy(e)},{passive:false});
+joyEl.addEventListener('touchmove',e=>{e.preventDefault();handleJoy(e)},{passive:false});
+joyEl.addEventListener('touchend',()=>{joy.active=false;joy.x=0;joy.y=0;stick.style.transform='translate(-50%,-50%)';});
+joyEl.addEventListener('mousedown',e=>{joy.active=true;handleJoy(e)});
+addEventListener('mousemove',e=>{if(joy.active)handleJoy(e)});
+addEventListener('mouseup',()=>{joy.active=false;joy.x=0;joy.y=0;stick.style.transform='translate(-50%,-50%)';});
+document.getElementById('fireBtn').addEventListener('touchstart',e=>{e.preventDefault();firing=true;});
+document.getElementById('fireBtn').addEventListener('touchend',()=>firing=false);
+document.getElementById('fireBtn').addEventListener('mousedown',()=>firing=true);
+addEventListener('mouseup',()=>firing=false);
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft')keys.left=true;if(e.key==='ArrowRight')keys.right=true;if(e.key==='ArrowUp')keys.up=true;if(e.key==='ArrowDown')keys.down=true;if(e.key===' ')firing=true;});
+addEventListener('keyup',e=>{if(e.key==='ArrowLeft')keys.left=false;if(e.key==='ArrowRight')keys.right=false;if(e.key==='ArrowUp')keys.up=false;if(e.key==='ArrowDown')keys.down=false;if(e.key===' ')firing=false;});
+</script>
+</body>
+</html>
